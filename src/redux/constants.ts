@@ -1,0 +1,4 @@
+export const ACTIONS = {
+    GET_USERS: 'GET_USERS',
+    GET_TABLE_USERS: "GET_TABLE_USERS"
+  };

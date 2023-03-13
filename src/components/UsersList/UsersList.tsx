@@ -1,48 +1,25 @@
-import { SetStateAction, useCallback, useEffect, useState } from "react";
-import { Button, Input, Modal, Table } from "antd";
+import { MouseEvent, SetStateAction, useCallback, useEffect, useState } from "react";
+import { Button, Input, Table } from "antd";
+import { DataItem, DefaultState, ModalItem } from "../../interfaces";
+import { useDispatch, useSelector } from "react-redux";
+import { ACTIONS } from "../../redux/constants";
 import { ColumnsType } from "antd/es/table";
 import Highlighter from "react-highlight-words";
+import { ModalWindow } from "../ModalWindow/ModalWindow";
 import getData from "../../api/getData";
-
 import "./UsersList.css";
-
-interface DataItem {
-  id: number;
-  name: string;
-  username: string;
-  email: string;
-  address: {
-    street: string;
-    suite: string;
-    city: string;
-    zipcode: string;
-    geo: { lat: string; lng: string };
-  };
-  phone: string;
-  website: string;
-  company: { name: string; catchPhrase: string; bs: string };
-}
-
-interface ModalItem {
-  name: string;
-  street: string;
-  suite: string;
-  city: string;
-  zipcode: string;
-  geo: {
-    lat: string;
-    lng: string;
-  };
-  companyName: string;
-  catchPhrase: string;
-  bs: string;
-}
 
 const { Search } = Input;
 
 export const UsersList = (): JSX.Element => {
-  const [data, setData] = useState<DataItem[] | []>([]);
-  const [tableData, setTableData] = useState<DataItem[] | []>(data);
+  const dispatch = useDispatch();
+
+  const data = useSelector(
+    (state: { users: DefaultState }) => state.users.data
+  );
+  const tableData = useSelector(
+    (state: { users: DefaultState }) => state.users.tableData
+  );
   const [searchWords, setSearchWords] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [input, setInput] = useState<string>("");
@@ -87,6 +64,7 @@ export const UsersList = (): JSX.Element => {
   const handleCancel = (): void => {
     setIsModalOpen(false);
   };
+
   const getDataFromServer = (): void => {
     getData().then((item: DataItem) =>
       localStorage.setItem("users", JSON.stringify(item))
@@ -96,11 +74,12 @@ export const UsersList = (): JSX.Element => {
   const resetUsers = useCallback((): void => {
     getDataFromServer();
     const updatedUsers = localStorage.getItem("users");
-    updatedUsers !== null && setData(JSON.parse(updatedUsers));
-    updatedUsers !== null && setTableData(JSON.parse(updatedUsers));
+    const newUsers = updatedUsers !== null && JSON.parse(updatedUsers);
+    dispatch({ type: ACTIONS.GET_USERS, data: newUsers });
+    dispatch({ type: ACTIONS.GET_TABLE_USERS, data: newUsers });
     setInput("");
     setSearchWords("");
-  }, [getDataFromServer]);
+  }, [getDataFromServer, dispatch]);
 
   useEffect((): void => {
     getDataFromServer();
@@ -109,24 +88,45 @@ export const UsersList = (): JSX.Element => {
   useEffect((): void => {
     const users: string | null = localStorage.getItem("users");
     if (users !== null) {
-      setData(JSON.parse(users));
+      const newData = JSON.parse(users);
+      dispatch({ type: ACTIONS.GET_USERS, data: newData });
     } else {
       getDataFromServer();
       const updatedUsers = localStorage.getItem("users");
-      updatedUsers !== null && setData(JSON.parse(updatedUsers));
+      const newUsers = updatedUsers !== null && JSON.parse(updatedUsers);
+      dispatch({ type: ACTIONS.GET_USERS, data: newUsers });
     }
-  }, []);
+  }, [dispatch]);
 
   useEffect((): void => {
-    setTableData(data);
-  }, [data]);
+    dispatch({ type: ACTIONS.GET_TABLE_USERS, data: data });
+  }, [data, dispatch]);
 
-  const deleteItem = (event: any, id: number): void => {
+  const deleteItem = (event: MouseEvent<HTMLAnchorElement, globalThis.MouseEvent> | MouseEvent<HTMLButtonElement, globalThis.MouseEvent>, id: number): void => {
     event.stopPropagation();
-    const filteredData = data.filter((element) => element.id !== +id);
-    setData(filteredData);
-    setTableData(data);
+    const filteredData = data.filter((element: DataItem) => element.id !== +id);
+    dispatch({ type: ACTIONS.GET_USERS, data: filteredData });
+    dispatch({ type: ACTIONS.GET_TABLE_USERS, data: data });
     localStorage.setItem("users", JSON.stringify(filteredData));
+  };
+
+  const searchUsers = (inputValue: string): void => {
+    if (inputValue) {
+      const filteredData = data.filter((item: DataItem) =>
+        Object.values(item).join("").includes(inputValue)
+      );
+      dispatch({ type: ACTIONS.GET_TABLE_USERS, data: filteredData });
+      setSearchWords(inputValue);
+    } else {
+      dispatch({ type: ACTIONS.GET_TABLE_USERS, data: data });
+      setSearchWords("");
+    }
+  };
+
+  const onChangeInput = (e: {
+    target: { value: SetStateAction<string> };
+  }): void => {
+    setInput(e.target.value);
   };
 
   const columns: ColumnsType<DataItem> = [
@@ -134,7 +134,7 @@ export const UsersList = (): JSX.Element => {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      render: (_: any, record: any) => (
+      render: (_: any, record: DataItem) => (
         <Highlighter
           highlightClassName="YourHighlightClass"
           searchWords={[searchWords]}
@@ -148,7 +148,7 @@ export const UsersList = (): JSX.Element => {
       title: "Username",
       dataIndex: "username",
       key: "username",
-      render: (_: any, record: any) => (
+      render: (_: any, record: DataItem) => (
         <Highlighter
           highlightClassName="YourHighlightClass"
           searchWords={[searchWords]}
@@ -161,7 +161,7 @@ export const UsersList = (): JSX.Element => {
       title: "Email",
       dataIndex: "email",
       key: "email",
-      render: (_: any, record: any) => (
+      render: (_: any, record: DataItem) => (
         <Highlighter
           highlightClassName="YourHighlightClass"
           searchWords={[searchWords]}
@@ -186,25 +186,6 @@ export const UsersList = (): JSX.Element => {
       ),
     },
   ];
-
-  const searchUsers = (inputValue: string): void => {
-    if (inputValue) {
-      const filteredData = data.filter((emoji) =>
-        Object.values(emoji).join("").includes(inputValue)
-      );
-      setTableData(filteredData);
-      setSearchWords(inputValue);
-    } else {
-      setTableData(data);
-      setSearchWords("");
-    }
-  };
-
-  const onChangeInput = (e: {
-    target: { value: SetStateAction<string> };
-  }): void => {
-    setInput(e.target.value);
-  };
 
   return (
     <div className="container">
@@ -240,25 +221,12 @@ export const UsersList = (): JSX.Element => {
         scroll={{ x: 1300 }}
         className="table"
       />
-      <Modal
-        title={modal?.name}
-        open={isModalOpen}
-        onOk={handleOk}
-        onCancel={handleCancel}
-        className="modal"
-      >
-        <div className="modal__container">
-          <h3 className="modal__header">Address:</h3>
-          <p className="modal__info">
-            {modal?.city}, {modal?.street}, {modal?.suite}, {modal?.zipcode}, (
-            {modal?.geo.lat}, {modal?.geo.lng})
-          </p>
-          <h3 className="modal__header">Company:</h3>
-          <p className="modal__info">
-            {modal?.name}, {modal?.bs}, {modal?.catchPhrase}
-          </p>
-        </div>
-      </Modal>
+      <ModalWindow
+        modal={modal}
+        isModalOpen={isModalOpen}
+        handleCancel={handleCancel}
+        handleOk={handleOk}
+      />
     </div>
   );
 };
