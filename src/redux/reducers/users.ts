@@ -3,13 +3,13 @@ import { ACTIONS } from "../constants";
 
 const defaultState: DefaultState = {
   data: [],
-  tableData: [],
+  tableData: []
 };
 
 export const users = (state = defaultState, action: { type: string, data: DataItem }) => {
   switch (action.type) {
     case ACTIONS.GET_USERS: {
-      return { ...state, data: action.data, tableData: action.data};
+      return { ...state, data: action.data, tableData: action.data };
     }
 
     case ACTIONS.GET_TABLE_USERS: {

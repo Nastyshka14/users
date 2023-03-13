@@ -15,10 +15,10 @@ export const UsersList = (): JSX.Element => {
   const dispatch = useDispatch();
 
   const data = useSelector(
-    (state: { users: DefaultState }) => state.users.data
+    (state: { table: DefaultState }) => state.table.data
   );
   const tableData = useSelector(
-    (state: { users: DefaultState }) => state.users.tableData
+    (state: { table: DefaultState }) => state.table.tableData
   );
   const [searchWords, setSearchWords] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
